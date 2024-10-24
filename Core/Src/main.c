@@ -61,6 +61,43 @@ static void MX_USART1_UART_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+int _write(int file, char *data, int len)
+  {
+    HAL_UART_Transmit(&huart1, (uint8_t*)data, len, HAL_MAX_DELAY);
+    return len;
+  }
+
+void send_uart_message(const char *message) 
+  {
+  // Send the string over UART
+  HAL_UART_Transmit(&huart1, (uint8_t*)message, strlen(message), HAL_MAX_DELAY);
+  }
+
+/**
+ * @brief   Checks the precharge voltage until voltage threshold is reached. 
+ * @param   vsense_target 
+ * @author  Alex Martinez
+ */
+void vsense(uint16_t vsense_target)
+{
+    uint16_t value_adc;
+    HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin); //LED1
+    HAL_ADC_Start(&hadc1); //needs to be here otherwise PollforConversion doesnt work
+    HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
+    value_adc = HAL_ADC_GetValue(&hadc1);
+    if (value_adc > vsense_target) { // 4095 * 24(target voltage) / 103.6
+      //HAL_GPIO_WritePin(DEBUG_2_GPIO_Port, DEBUG_2_Pin, GPIO_PIN_SET); //LED1
+      send_uart_message("Ready!\r\n");
+    } else {
+      //HAL_GPIO_WritePin(DEBUG_2_GPIO_Port, DEBUG_2_Pin, GPIO_PIN_RESET); //LED2
+      send_uart_message("Not ready!\r\n");
+    }
+    HAL_Delay(500);
+
+  return;
+  // placeholder
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -95,18 +132,8 @@ int main(void)
   MX_ADC1_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
-  int _write(int file, char *data, int len)
-  {
-    HAL_UART_Transmit(&huart1, (uint8_t*)data, len, HAL_MAX_DELAY);
-    return len;
-  }
+  uint16_t vsense_target = 2000; 
 
-  void send_uart_message(const char *message) {
-    // Send the string over UART
-    HAL_UART_Transmit(&huart1, (uint8_t*)message, strlen(message), HAL_MAX_DELAY);
-  }
-
-  uint16_t value_adc;
   
    
   /* USER CODE END 2 */
@@ -116,22 +143,10 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-    HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin); //LED1
-    HAL_ADC_Start(&hadc1); //needs to be here otherwise PollforConversion doesnt work
-    HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
-    value_adc = HAL_ADC_GetValue(&hadc1);
-    if (value_adc > 4095) { // 4095 * 24(target voltage) / 103.6
-      //HAL_GPIO_WritePin(DEBUG_2_GPIO_Port, DEBUG_2_Pin, GPIO_PIN_SET); //LED1
-      send_uart_message("Ready!\r\n");
-
-
-    } else {
-      //HAL_GPIO_WritePin(DEBUG_2_GPIO_Port, DEBUG_2_Pin, GPIO_PIN_RESET); //LED2
-      send_uart_message("Not ready!\r\n");
-    }
-    HAL_Delay(500);
+    
 
     /* USER CODE BEGIN 3 */
+    vsense(vsense_target);
   }
   /* USER CODE END 3 */
 }
