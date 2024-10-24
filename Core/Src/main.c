@@ -78,23 +78,31 @@ void send_uart_message(const char *message)
  * @param   vsense_target 
  * @author  Alex Martinez
  */
-void vsense(uint16_t vsense_target)
+int vsense(uint16_t vsense_target, int num_tries)
 {
+    int i=0;
     uint16_t value_adc;
     HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin); //LED1
+    while(i<num_tries)
+    {
     HAL_ADC_Start(&hadc1); //needs to be here otherwise PollforConversion doesnt work
     HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
     value_adc = HAL_ADC_GetValue(&hadc1);
     if (value_adc > vsense_target) { // 4095 * 24(target voltage) / 103.6
       //HAL_GPIO_WritePin(DEBUG_2_GPIO_Port, DEBUG_2_Pin, GPIO_PIN_SET); //LED1
-      send_uart_message("Ready!\r\n");
+      send_uart_message("Threshold reached!\r\n");
+      HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin); //LED1
+      return 1;
     } else {
       //HAL_GPIO_WritePin(DEBUG_2_GPIO_Port, DEBUG_2_Pin, GPIO_PIN_RESET); //LED2
-      send_uart_message("Not ready!\r\n");
+      send_uart_message("undervoltage!\r\n");
     }
-    HAL_Delay(500);
+    i++;
+    HAL_Delay(1000);
+    }
+    
 
-  return;
+  return 0;
   // placeholder
 }
 
@@ -133,7 +141,9 @@ int main(void)
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
   uint16_t vsense_target = 2000; 
+  int num_tries = 10;
 
+  vsense(vsense_target, num_tries);
   
    
   /* USER CODE END 2 */
@@ -146,7 +156,9 @@ int main(void)
     
 
     /* USER CODE BEGIN 3 */
-    vsense(vsense_target);
+    send_uart_message("Reset to test again.\r\n");
+    HAL_Delay(1000);
+
   }
   /* USER CODE END 3 */
 }
